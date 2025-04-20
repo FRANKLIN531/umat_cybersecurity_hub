@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CVEs - Cybersecurity Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      background-color: #f4f7fc;
+      font-family: 'Roboto', sans-serif;
+      color: #333;
+    }
+
+    .header {
+      background-color: #1c3d5a;
+      color: white;
+      padding: 40px 0;
+      text-align: center;
+      font-size: 2.5rem;
+      font-weight: 700;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .home-button {
+      position: absolute;
+      top: 15px;
+      left: 20px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      transition: background-color 0.3s;
+    }
+
+    .home-button:hover {
+      background-color: #0056b3;
+    }
+
+    .section-title {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 30px;
+      color: #1c3d5a;
+      text-align: center;
+    }
+
+    .cve-card-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .cve-card {
+      background-color: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      width: 350px;
+      height: 250;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cve-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .cve-card-body {
+      padding: 15px;
+      flex: 1;
+    }
+
+    .cve-card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1c3d5a;
+      margin-bottom: 10px;
+    }
+
+    .cve-card-text {
+      font-size: 0.95rem;
+      color: #555;
+      margin-bottom: 15px;
+    }
+
+    .cve-card-footer {
+      text-align: right;
+      padding: 10px 15px;
+      background-color: #f8f9fa;
+    }
+
+    .btn-primary {
+      background-color: #007bff;
+      border-color: #007bff;
+      padding: 8px 16px;
+      border-radius: 5px;
+      font-size: 0.9rem;
+    }
+
+    .btn-primary:hover {
+      background-color: #0056b3;
+      border-color: #004085;
+    }
+
+    .footer {
+      background-color: #1c3d5a;
+      color: white;
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+    }
+
+    .footer a {
+      color: white;
+      text-decoration: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      background-color: #007bff;
+      margin: 5px;
+      transition: background-color 0.3s;
+    }
+    .chart-container {
+        width: 80%;
+        margin: 40px auto;
+      }
+      #cveChart {
+        display: block;
+        width: 100% !important;
+        height: 500px !important;
+      }
+      
+      
+    .footer a:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <button class="home-button" onclick="window.location.href='index.html'">Home</button>
+    <div class="container">
+      <h1>CVEs - Cybersecurity Hub</h1>
+    </div>
+  </div>
+
+  
+<!-- CVE Display Section -->
+<div id="cve-display" class="container mt-5">
+    <div class="section-title">Latest CVEs from NIST</div>
+    <div id="cve-cards" class="cve-card-container">
+        <!-- CVE cards will be dynamically inserted here -->
+    </div>
+    <div id="error-message" class="alert alert-danger" style="display: none;">
+        Failed to load CVE data. Please try again later.
+    </div>
+</div>
+  
+  <!-- Chart Section -->
+  <div class="chart-container">
+    <canvas id="cveChart" width="400" height="400"></canvas>
+  </div>
+  <!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <div class="footer">
+    <p>&copy; 2025 Cybersecurity Hub | <a href="index.html">Back to Home</a></p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const cveCardsContainer = document.getElementById('cve-cards');
+        const errorMessage = document.getElementById('error-message');
+        const ctx = document.getElementById('cveChart').getContext('2d');
+      
+        fetch('https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=20&startIndex=0')
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.vulnerabilities && Array.isArray(data.vulnerabilities)) {
+              const severityCounts = {
+                CRITICAL: 0,
+                HIGH: 0,
+                MEDIUM: 0,
+                LOW: 0,
+                NONE: 0
+              };
+      
+              data.vulnerabilities.forEach(item => {
+                const cve = item.cve;
+                const description = cve.descriptions.find(desc => desc.lang === 'en')?.value || 'No description available.';
+                const severity = cve.metrics?.cvssMetricV31?.[0]?.cvssData?.baseSeverity || 'NONE';
+      
+                // Increment severity count
+                if (severityCounts[severity] !== undefined) {
+                  severityCounts[severity]++;
+                } else {
+                  severityCounts[severity] = 1;
+                }
+      
+                // Create CVE card
+                const cveCard = document.createElement('div');
+                cveCard.classList.add('cve-card');
+                cveCard.innerHTML = `
+                  <div class="cve-card-body">
+                    <div class="cve-card-title">${cve.id}</div>
+                    <div class="cve-card-text">${description}</div>
+                  </div>
+                  <div class="cve-card-footer">
+                    <a href="https://nvd.nist.gov/vuln/detail/${cve.id}" target="_blank" class="btn btn-primary">Read More</a>
+                  </div>
+                `;
+                cveCardsContainer.appendChild(cveCard);
+              });
+      
+              // Create chart
+              new Chart(ctx, {
+                type: 'bar',
+                data: {
+                  labels: Object.keys(severityCounts),
+                  datasets: [{
+                    label: 'Number of CVEs',
+                    data: Object.values(severityCounts),
+                    backgroundColor: [
+                      '#dc3545', // CRITICAL
+                      '#fd7e14', // HIGH
+                      '#ffc107', // MEDIUM
+                      '#28a745', // LOW
+                      '#6c757d'  // NONE
+                    ]
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  plugins: {
+                    title: {
+                      display: true,
+                      text: 'CVE Severity Distribution'
+                    }
+                  }
+                }
+              });
+            } else {
+              throw new Error('No CVE data available');
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching CVE data:', error);
+            errorMessage.style.display = 'block';
+          });
+      });
+      
+  </script>
+
+
+  
+</body>
+</html>
